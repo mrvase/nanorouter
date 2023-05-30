@@ -1,128 +1,173 @@
-import type { Location, Action, Listener, History } from "./types";
-import { parsePath, createPath, createKey } from "./utils";
+import { getMatches } from "./matches";
+import type {
+  Location,
+  Action,
+  Listener,
+  History,
+  Route,
+  RouteMatch,
+  HistoryState,
+} from "./types";
+import { createPath } from "./utils";
 
-const PopStateEventType = "popstate";
+const compareParams = (
+  params1: Record<string, string>,
+  params2: Record<string, string>
+) => {
+  const keys1 = Object.keys(params1);
+  const keys2 = Object.keys(params2);
 
-type HistoryOptions = {
-  window?: Window;
+  if (keys1.length !== keys2.length) {
+    return false;
+  }
+
+  return keys1.every((key) => params1[key] === params2[key]);
 };
 
-type HistoryState = {
-  usr: any;
-  key?: string;
+const existsInCache = (
+  cache: Map<object, Record<string, string>[]>,
+  loader: any,
+  params: any
+) => {
+  const current = cache.get(loader);
+  return current && current.some((p) => compareParams(p, params));
 };
 
-export function createHistory(options: HistoryOptions = {}): History {
-  let { window = document.defaultView! } = options;
-  let globalHistory = window.history;
-  let action: Action = "POP";
+export function createHistory(options: { routes: Route[]; window?: Window }) {
+  let state: HistoryState = {
+    action: "POP",
+    location: getLocation(),
+  };
+
+  function setState(newState: HistoryState) {
+    state = newState;
+    callLoaders(newState.location);
+    if (listener) {
+      listener(newState);
+    }
+  }
+
   let listener: Listener | null = null;
 
-  function push(to: string | Location) {
-    action = "PUSH";
+  function handleAction(actionFromArg: "PUSH" | "REPLACE", location: Location) {
+    const globalHistory = (options.window ?? document.defaultView!).history;
 
-    let location = createLocation(history.location, to);
-    let historyState = getHistoryState(location);
-    let url = history.createHref(location);
+    const historyState = {
+      usr: location.state,
+      key: location.key,
+    };
 
-    // try...catch because iOS limits us to 100 pushState calls
+    const url = createPath(location);
+
     try {
-      globalHistory.pushState(historyState, "", url);
+      const method = actionFromArg === "PUSH" ? "pushState" : "replaceState";
+      globalHistory[method](historyState, "", url);
     } catch (error) {
+      // iOS has a limit of 100 pushState calls
       window.location.assign(url);
     }
 
-    if (listener) {
-      listener({ action, location });
-    }
-  }
-
-  function replace(to: string | Location) {
-    action = "REPLACE";
-
-    let location = createLocation(history.location, to);
-    let historyState = getHistoryState(location);
-    let url = history.createHref(location);
-
-    globalHistory.replaceState(historyState, "", url);
-
-    if (listener) {
-      listener({ action, location });
-    }
+    setState({
+      action: actionFromArg,
+      location,
+    });
   }
 
   function handlePop() {
-    action = "POP";
+    setState({
+      action: "POP",
+      location: getLocation(),
+    });
+  }
+
+  function listen(fn: Listener) {
+    const window = options.window ?? document.defaultView!;
+
     if (listener) {
-      listener({ action, location: history.location });
+      throw new Error("A history only accepts one active listener");
+    }
+    window.addEventListener("popstate", handlePop);
+    listener = fn;
+
+    return () => {
+      window.removeEventListener("popstate", handlePop);
+      listener = null;
+    };
+  }
+
+  const loaders = new Map<object, Record<string, string>[]>();
+
+  function callLoaders(location: Location) {
+    const lastLoaders = new Map(loaders);
+    loaders.clear();
+
+    const matches = getMatches(location.pathname, options.routes, {
+      withConfig: true,
+    });
+
+    callLoadersRecursive(matches);
+
+    function callLoadersRecursive(matches: RouteMatch[]) {
+      matches.forEach((match) => {
+        callLoader(match);
+        if (match.children) {
+          callLoadersRecursive(match.children);
+        }
+      });
+    }
+
+    function callLoader(match: RouteMatch) {
+      const loader = match.config.loader;
+      if (!loader) return;
+
+      if (existsInCache(loaders, loader, match.params)) return;
+      loaders.set(loader, (loaders.get(loader) ?? []).concat(match.params));
+
+      if (existsInCache(lastLoaders, loader, match.params)) return;
+      loader(match.params);
     }
   }
 
-  let history: History = {
+  function getLocation() {
+    const globalHistory = (options.window ?? document.defaultView!).history;
+    const { pathname, search, hash } = window.location;
+    return {
+      pathname,
+      search,
+      hash,
+      // state defaults to `null` because `window.history.state` does
+      state: (globalHistory.state && globalHistory.state.usr) || null,
+      key: (globalHistory.state && globalHistory.state.key) || "default",
+    };
+  }
+
+  const history: History = {
+    get routes() {
+      return options.routes;
+    },
     get action() {
-      return action;
+      return state.action;
     },
     get location() {
-      return getLocation(window, globalHistory);
+      return state.location;
     },
-    listen(fn: Listener) {
-      if (listener) {
-        throw new Error("A history only accepts one active listener");
-      }
-      window.addEventListener(PopStateEventType, handlePop);
-      listener = fn;
-
-      return () => {
-        window.removeEventListener(PopStateEventType, handlePop);
-        listener = null;
-      };
+    listen,
+    sync() {
+      return [listen, () => state];
     },
-    createHref(to) {
-      return typeof to === "string" ? to : createPath(to);
+    push(location) {
+      handleAction("PUSH", location);
     },
-    push,
-    replace,
+    replace(location) {
+      handleAction("REPLACE", location);
+    },
     go(n) {
+      const globalHistory = (options.window ?? document.defaultView!).history;
       return globalHistory.go(n);
     },
   };
 
+  callLoaders(state.location);
+
   return history;
-}
-
-function getLocation(
-  window: Window,
-  globalHistory: Window["history"]
-): Readonly<Location> {
-  let { pathname, search, hash } = window.location;
-  return {
-    pathname,
-    search,
-    hash,
-    // state defaults to `null` because `window.history.state` does
-    state: (globalHistory.state && globalHistory.state.usr) || null,
-    key: (globalHistory.state && globalHistory.state.key) || "default",
-  };
-}
-
-function createLocation(
-  current: string | Location,
-  next: string | Location
-): Readonly<Location> {
-  let location: Readonly<Location> = {
-    pathname: typeof current === "string" ? current : current.pathname,
-    search: "",
-    hash: "",
-    key: createKey(),
-    state: null,
-    ...(typeof next === "string" ? parsePath(next) : next),
-  };
-  return location;
-}
-
-function getHistoryState(location: Location): HistoryState {
-  return {
-    usr: location.state,
-    key: location.key,
-  };
 }

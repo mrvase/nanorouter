@@ -13,54 +13,49 @@ import {
 import { createKey, resolveTo } from "./utils";
 import { getMatches } from "./matches";
 
-export const HistoryContext = React.createContext<History>(null!);
-
-export const NavigationContext = React.createContext<NavigateFunction>(null!);
+export const NavigationContext = React.createContext<
+  (to: To, options?: NavigateOptions) => Path
+>(null!);
+export const useNavigate = () => React.useContext(NavigationContext);
 
 export const RouterStateContext = React.createContext<{
   location: Location;
   action: Action;
 }>(null!);
-
-export function useLocation(): Location {
-  return React.useContext(RouterStateContext).location;
-}
-
-export function useAction(): string {
-  return React.useContext(RouterStateContext).action;
-}
+export const useLocation = () => React.useContext(RouterStateContext).location;
+export const useAction = () => React.useContext(RouterStateContext).action;
 
 export const PathContext = React.createContext<Path>(null!);
+export const usePath = () => React.useContext(PathContext);
 
-export function usePath(): Path {
-  return React.useContext(PathContext);
-}
+const RouteConfigContext = React.createContext<Route[]>(null!);
+export const useRouteConfig = () => React.useContext(RouteConfigContext);
 
-interface NavigateFunction {
-  (to: To, options?: NavigateOptions): Path;
-}
-
-export function useNavigate() {
-  return React.useContext(NavigationContext);
-}
+const RouteContext = React.createContext<RouteMatch>(null!);
+export const useRoute = () => React.useContext(RouteContext);
 
 export function Router({
   children,
-  window,
-  routes,
+  history,
 }: {
   children?: React.ReactNode;
-  window?: Window;
-  routes: Route[];
+  history: History;
 }) {
-  const [history] = React.useState<History>(createHistory({ window }));
+  const state = React.useSyncExternalStore(...history.sync());
 
+  /*
   let [state, setState] = React.useState({
-    action: history.action,
-    location: history.location,
+    action: routerHistory.action,
+    location: routerHistory.location,
   });
 
-  React.useLayoutEffect(() => history.listen(setState), [history]);
+  React.useLayoutEffect(() => {
+    routerHistory.initialize({ window, routes });
+    return routerHistory.listen((state) => {
+      setState(state);
+    });
+  }, [history]);
+  */
 
   let activeRef = React.useRef(false);
   React.useEffect(() => {
@@ -69,37 +64,32 @@ export function Router({
 
   const pathname = state.location.pathname;
 
-  let navigate: NavigateFunction = React.useCallback(
+  let navigate = React.useCallback(
     (to: To, options: NavigateOptions = {}) => {
       const { navigate = true, replace = false, state = null } = options;
-      let path = resolveTo(to, pathname);
-      const action = replace ? history.replace : history.push;
+      let path: Path & Partial<Location> = resolveTo(to, pathname);
 
       if (navigate && activeRef.current) {
-        action({
-          ...path,
-          key: createKey(),
-          state,
-        });
+        path.key = createKey();
+        path.state = state;
+        (replace ? history.replace : history.push)(path as Location);
       }
 
-      return path;
+      return path as Location;
     },
     [pathname]
   );
 
   return (
-    <HistoryContext.Provider value={history}>
-      <RouteConfigContext.Provider value={routes}>
-        <RouterStateContext.Provider value={state}>
-          <PathContext.Provider value={state.location}>
-            <NavigationContext.Provider value={navigate}>
-              {children}
-            </NavigationContext.Provider>
-          </PathContext.Provider>
-        </RouterStateContext.Provider>
-      </RouteConfigContext.Provider>
-    </HistoryContext.Provider>
+    <RouteConfigContext.Provider value={history.routes}>
+      <RouterStateContext.Provider value={state}>
+        <PathContext.Provider value={state.location}>
+          <NavigationContext.Provider value={navigate}>
+            {children}
+          </NavigationContext.Provider>
+        </PathContext.Provider>
+      </RouterStateContext.Provider>
+    </RouteConfigContext.Provider>
   );
 }
 
@@ -194,14 +184,6 @@ export function ParallelRouteNavigator({
   );
 }
 
-const RouteConfigContext = React.createContext<Route[]>(null!);
-
-export const useRouteConfig = () => React.useContext(RouteConfigContext);
-
-const RouteContext = React.createContext<RouteMatch>(null!);
-
-export const useRoute = () => React.useContext(RouteContext);
-
 const useMatches = () => {
   const config = useRouteConfig();
   const path = usePath();
@@ -282,21 +264,15 @@ function ParallelRoutingListener({
       ]);
 
       if (type === "move") {
-        const from = payload.from;
-        const to = payload.to;
-        const [removed] = array.splice(from, 1);
-        array.splice(to, 0, removed);
+        const [removed] = array.splice(payload.from, 1);
+        array.splice(payload.to, 0, removed);
       } else if (type === "open") {
-        const { path, index } = payload;
-        array.splice(index + 1, 0, [path, createKey()]);
+        array.splice(payload.index + 1, 0, [payload.path, createKey()]);
       } else if (type === "close") {
-        const index = payload;
-        array.splice(index, 1);
+        array.splice(payload, 1);
       } else {
         return;
       }
-
-      console.log(array);
 
       navigate(array.map((el) => el[0]).join(""));
       setKeys(array.map((el) => el[1]));
@@ -319,7 +295,7 @@ export function ParallelRoutesImpl({ id }: { id?: string }) {
   }
 
   return (
-    <>
+    <RoutesTypeContext.Provider value="parallel">
       {id && (
         <ParallelRoutingListener
           id={id}
@@ -328,32 +304,28 @@ export function ParallelRoutesImpl({ id }: { id?: string }) {
           setKeys={setKeys}
         />
       )}
-      {matches.map((el, index) => {
-        return (
-          <ParallelRouteNavigator
-            key={keys[index] ?? index}
-            pathname={el.segment}
-            matches={matches}
-            index={index}
-          >
-            <RouteConfigContext.Provider value={el.config.subroutes ?? []}>
-              <RouteContext.Provider key={index} value={el}>
-                <el.config.render params={el.params} />
-              </RouteContext.Provider>
-            </RouteConfigContext.Provider>
-          </ParallelRouteNavigator>
-        );
-      })}
-    </>
+      {matches.map((el, index) => (
+        <ParallelRouteNavigator
+          key={keys[index] ?? index}
+          pathname={el.segment}
+          matches={matches}
+          index={index}
+        >
+          <RouteConfigContext.Provider value={el.config.subroutes ?? []}>
+            <RouteContext.Provider key={index} value={el}>
+              <el.config.render params={el.params} />
+            </RouteContext.Provider>
+          </RouteConfigContext.Provider>
+        </ParallelRouteNavigator>
+      ))}
+    </RoutesTypeContext.Provider>
   );
 }
 
 export function ParallelRoutes({ id }: { id?: string }) {
   return (
     <RelativeRouteNavigator>
-      <RoutesTypeContext.Provider value="parallel">
-        <ParallelRoutesImpl id={id} />
-      </RoutesTypeContext.Provider>
+      <ParallelRoutesImpl id={id} />
     </RelativeRouteNavigator>
   );
 }

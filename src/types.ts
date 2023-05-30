@@ -32,7 +32,10 @@ export interface Listener {
   (update: Update): void;
 }
 
+export type HistoryState = { action: Action; location: Location };
+
 export interface History {
+  readonly routes: Route[];
   readonly action: Action;
   readonly location: Location;
 
@@ -45,13 +48,7 @@ export interface History {
    */
   listen(listener: Listener): () => void;
 
-  /**
-   * Returns a valid href for the given `to` value that may be used as
-   * the value of an <a href> attribute.
-   *
-   * @param to - The destination URL
-   */
-  createHref(to: To): string;
+  sync(): [(listener: Listener) => () => void, () => HistoryState];
 
   /**
    * Pushes a new location onto the history stack, increasing its length by one.
@@ -61,7 +58,7 @@ export interface History {
    * @param to - The new URL
    * @param state - Data to associate with the new location
    */
-  push(to: string | Location): void;
+  push(to: Location): void;
 
   /**
    * Replaces the current location in the history stack with a new one.  The
@@ -70,7 +67,7 @@ export interface History {
    * @param to - The new URL
    * @param state - Data to associate with the new location
    */
-  replace(to: string | Location): void;
+  replace(to: Location): void;
 
   /**
    * Navigates `n` entries backward/forward in the history stack relative to the
@@ -92,7 +89,6 @@ export interface NavigateOptions {
 }
 
 export interface Navigator {
-  createHref: History["createHref"];
   go: History["go"];
   push: History["push"];
   replace: History["replace"];
@@ -115,6 +111,7 @@ export type Matcher =
 export type Route = {
   match: Matcher;
   render: React.FC<any>;
+  loader?: (params: Record<string, string>) => void;
   next?: () => Route[];
   subroutes?: Route[];
 };
