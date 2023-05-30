@@ -1,7 +1,6 @@
 import { getMatches } from "./matches";
 import type {
   Location,
-  Action,
   Listener,
   History,
   Route,
