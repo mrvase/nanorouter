@@ -10,8 +10,8 @@
     "dist/**"
   ],
   "scripts": {
-    "build": "tsup --entry src/index.ts --entry src/react.tsx --format esm,cjs --minify --dts --external react",
-    "dev": "tsup --entry src/index.ts --entry src/react.tsx --format esm,cjs --watch --dts",
+    "build": "tsup --entry src/index.ts --entry src/routes/nested.tsx --entry src/routes/parallel.tsx --format esm,cjs --minify --dts --external react",
+    "dev": "tsup --entry src/index.ts --entry src/routes/nested.tsx --entry src/routes/parallel.tsx --format esm,cjs --watch --dts",
     "lint": "eslint \"src/**/*.ts*\"",
     "clean": "rm -rf node_modules && rm -rf dist",
     "test": "vitest",

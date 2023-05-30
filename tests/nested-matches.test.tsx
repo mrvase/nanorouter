@@ -1,6 +1,7 @@
 import { it, expect } from "vitest";
 import { Link } from "../src/Link";
-import { NestedRoutes, ParallelRoutes } from "../src/Router";
+import { NestedRoutes } from "../src/routes/nested";
+import { ParallelRoutes } from "../src/routes/parallel";
 import { getMatches } from "../src/matches";
 import { Route } from "../src/types";
 
