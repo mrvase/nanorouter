@@ -32,7 +32,12 @@ export interface Listener {
   (update: Update): void;
 }
 
-export type HistoryState = { action: Action; location: Location };
+export type HistoryState = {
+  action: Action;
+  location: Location;
+  isLoading: boolean;
+  pending: Location | undefined;
+};
 
 export interface History {
   readonly routes: Route[];
@@ -111,7 +116,8 @@ export type Matcher =
 export type Route = {
   match: Matcher;
   render: React.FC<any>;
-  loader?: (params: Record<string, string>) => void;
+  loader?: (params: Record<string, string>) => Promise<any> | void;
   next?: () => Route[];
   subroutes?: Route[];
+  await?: boolean;
 };

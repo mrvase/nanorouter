@@ -1,7 +1,7 @@
 import React from "react";
 import {
-  Action,
   History,
+  HistoryState,
   Location,
   NavigateOptions,
   Path,
@@ -18,12 +18,11 @@ export const NavigationContext = React.createContext<
 >(null!);
 export const useNavigate = () => React.useContext(NavigationContext);
 
-export const RouterStateContext = React.createContext<{
-  location: Location;
-  action: Action;
-}>(null!);
+export const RouterStateContext = React.createContext<HistoryState>(null!);
 export const useLocation = () => React.useContext(RouterStateContext).location;
 export const useAction = () => React.useContext(RouterStateContext).action;
+export const useRouterIsLoading = () =>
+  React.useContext(RouterStateContext).isLoading;
 
 export const PathContext = React.createContext<Path>(null!);
 export const usePath = () => React.useContext(PathContext);

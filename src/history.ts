@@ -7,7 +7,13 @@ import type {
   RouteMatch,
   HistoryState,
 } from "./types";
-import { createPath } from "./utils";
+import { createKey, createPath } from "./utils";
+
+type LoaderData = {
+  params: Record<string, string>;
+  promise: Promise<any> | undefined;
+  data: unknown | undefined;
+};
 
 const compareParams = (
   params1: Record<string, string>,
@@ -23,26 +29,85 @@ const compareParams = (
   return keys1.every((key) => params1[key] === params2[key]);
 };
 
-const existsInCache = (
-  cache: Map<object, Record<string, string>[]>,
-  loader: any,
-  params: any
-) => {
-  const current = cache.get(loader);
-  return current && current.some((p) => compareParams(p, params));
+/*
+const shouldAwait = (matches: RouteMatch[]) => {
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i];
+    if (
+      (match.config.loader && match.config.await) ||
+      (match.children && shouldAwait(match.children))
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+*/
+
+const getFromCache = (cache: Map<object, LoaderData[]>, match: RouteMatch) => {
+  const current = cache.get(match.config.loader!);
+  return current && current.find((p) => compareParams(p.params, match.params));
+};
+
+const rootLocation = {
+  pathname: "/",
+  search: "",
+  hash: "",
+  key: createKey(),
+  state: null,
 };
 
 export function createHistory(options: { routes: Route[]; window?: Window }) {
   let state: HistoryState = {
     action: "POP",
     location: getLocation(),
+    isLoading: true,
+    pending: undefined,
   };
 
-  function setState(newState: HistoryState) {
-    state = newState;
-    callLoaders(newState.location);
-    if (listener) {
-      listener(newState);
+  let current = createKey();
+
+  function setState(
+    newState: Pick<HistoryState, "action" | "location">,
+    initial?: boolean
+  ) {
+    const key = newState.location.key;
+    current = key;
+
+    const matches = getMatches(newState.location.pathname, options.routes, {
+      withConfig: true,
+    });
+    const promises = callLoaders(matches);
+    const shouldAwait = promises.length > 0;
+    let awaited = false;
+
+    const set = (newState: HistoryState) => {
+      state = newState;
+      if (listener && (!initial || awaited)) listener(newState);
+    };
+
+    if (shouldAwait) {
+      set({
+        ...state,
+        isLoading: true,
+        pending: newState.location,
+        ...(initial && { location: rootLocation }),
+      });
+      awaited = true;
+      Promise.all(promises).then(() => {
+        if (current !== key) return;
+        set({
+          ...newState,
+          isLoading: false,
+          pending: undefined,
+        });
+      });
+    } else {
+      set({
+        ...newState,
+        isLoading: false,
+        pending: undefined,
+      });
     }
   }
 
@@ -94,21 +159,19 @@ export function createHistory(options: { routes: Route[]; window?: Window }) {
     };
   }
 
-  const loaders = new Map<object, Record<string, string>[]>();
+  const loaders = new Map<object, LoaderData[]>();
 
-  function callLoaders(location: Location) {
+  function callLoaders(matches: RouteMatch[]) {
     const lastLoaders = new Map(loaders);
     loaders.clear();
 
-    const matches = getMatches(location.pathname, options.routes, {
-      withConfig: true,
-    });
+    const promises: (Promise<any> | undefined)[] = [];
 
     callLoadersRecursive(matches);
 
     function callLoadersRecursive(matches: RouteMatch[]) {
       matches.forEach((match) => {
-        callLoader(match);
+        promises.push(callLoader(match));
         if (match.children) {
           callLoadersRecursive(match.children);
         }
@@ -119,12 +182,40 @@ export function createHistory(options: { routes: Route[]; window?: Window }) {
       const loader = match.config.loader;
       if (!loader) return;
 
-      if (existsInCache(loaders, loader, match.params)) return;
-      loaders.set(loader, (loaders.get(loader) ?? []).concat(match.params));
+      const current = getFromCache(loaders, match);
 
-      if (existsInCache(lastLoaders, loader, match.params)) return;
-      loader(match.params);
+      if (current) return;
+
+      let data: LoaderData;
+
+      const prev = getFromCache(lastLoaders, match);
+
+      if (prev) {
+        data = prev;
+      } else {
+        let result = loader(match.params);
+
+        if (result && "then" in result) {
+          result = result.then((res) => {
+            data.promise = undefined;
+            data.data = res;
+            return res;
+          });
+        }
+
+        data = {
+          params: match.params,
+          promise: result ?? undefined,
+          data: undefined,
+        };
+      }
+
+      loaders.set(loader, (loaders.get(loader) ?? []).concat(data));
+
+      return match.config.await ? data.promise : undefined;
     }
+
+    return promises.filter((el): el is Promise<any> => Boolean(el));
   }
 
   function getLocation() {
@@ -166,7 +257,7 @@ export function createHistory(options: { routes: Route[]; window?: Window }) {
     },
   };
 
-  callLoaders(state.location);
+  setState(state, true); // to call loaders
 
   return history;
 }
