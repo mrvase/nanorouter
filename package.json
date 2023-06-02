@@ -1,6 +1,6 @@
 {
   "name": "@nanokit/router",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -10,8 +10,8 @@
     "dist/**"
   ],
   "scripts": {
-    "build": "tsup --entry src/index.ts --entry src/routes/nested.tsx --entry src/routes/parallel.tsx --format esm,cjs --minify --dts --external react",
-    "dev": "tsup --entry src/index.ts --entry src/routes/nested.tsx --entry src/routes/parallel.tsx --format esm,cjs --watch --dts",
+    "build": "tsup --entry src/index.ts --entry src/routes/nested.tsx --entry src/routes/parallel.tsx --entry src/routes/nested-transition.tsx --format esm,cjs --minify --dts --external react",
+    "dev": "tsup --entry src/index.ts --entry src/routes/nested.tsx --entry src/routes/parallel.tsx --entry src/routes/nested-transition.tsx --format esm,cjs --watch --dts",
     "lint": "eslint \"src/**/*.ts*\"",
     "clean": "rm -rf node_modules && rm -rf dist",
     "test": "vitest",
@@ -48,10 +48,20 @@
       "require": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./react": {
-      "import": "./dist/react.mjs",
-      "require": "./dist/react.js",
-      "default": "./dist/react.js"
+    "./routes/parallel": {
+      "import": "./dist/routes/parallel.mjs",
+      "require": "./dist/routes/parallel.js",
+      "default": "./dist/routes/parallel.js"
+    },
+    "./routes/nested": {
+      "import": "./dist/routes/nested.mjs",
+      "require": "./dist/routes/nested.js",
+      "default": "./dist/routes/nested.js"
+    },
+    "./routes/nested-transition": {
+      "import": "./dist/routes/nested-transition.mjs",
+      "require": "./dist/routes/nested-transition.js",
+      "default": "./dist/routes/nested-transition.js"
     }
   },
   "typesVersions": {
