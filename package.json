@@ -1,6 +1,6 @@
 {
   "name": "@nanokit/router",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -69,8 +69,14 @@
       ".": [
         "dist/index.d.ts"
       ],
-      "react": [
-        "dist/react.d.ts"
+      "routes/parallel": [
+        "dist/routes/parallel.d.ts"
+      ],
+      "routes/nested": [
+        "dist/routes/nested.d.ts"
+      ],
+      "routes/nested-transition": [
+        "dist/routes/nested-transition.d.ts"
       ]
     }
   }
