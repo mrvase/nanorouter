@@ -1,5 +1,5 @@
 import React from "react";
-import { RouteContext } from "../Router";
+import { RouteContextProvider } from "../Router";
 import { useMatches } from "./utils";
 import { RouteMatch } from "../types";
 
@@ -20,7 +20,7 @@ function usePrevious<T>(value: T) {
   return [prev || value, isReset] as [T, boolean];
 }
 
-export function NestedTransitionRoutes() {
+export function NestedTransitionRoutes({ id }: { id?: string }) {
   const currentMatches = useMatches();
   const [prevMatches, isReset] = usePrevious(currentMatches);
 
@@ -48,11 +48,11 @@ export function NestedTransitionRoutes() {
         exit={props.exit}
         replace={props.replace}
       >
-        <RouteContext.Provider value={match}>
+        <RouteContextProvider match={match} id={id}>
           <match.config.render params={match.params}>
             {children}
           </match.config.render>
-        </RouteContext.Provider>
+        </RouteContextProvider>
       </RouteTransition>
     );
   };

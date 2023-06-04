@@ -1,5 +1,5 @@
 import React from "react";
-import { RouteContext, useNavigate } from "../Router";
+import { RouteContextProvider, useNavigate } from "../Router";
 import { RouteMatch } from "../types";
 import { createKey } from "../utils";
 import {
@@ -120,9 +120,9 @@ function ParallelRoutesImpl({
           matches={matches}
           index={el.index}
         >
-          <RouteContext.Provider value={el}>
+          <RouteContextProvider match={el} id={id}>
             <el.config.render params={el.params} />
-          </RouteContext.Provider>
+          </RouteContextProvider>
         </ParallelRouteNavigator>
       ))}
     </>

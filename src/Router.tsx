@@ -27,8 +27,43 @@ export const useRouterIsLoading = () =>
 export const PathContext = React.createContext<Path>(null!);
 export const usePath = () => React.useContext(PathContext);
 
-export const RouteContext = React.createContext<RouteMatch>(null!);
-export const useRoute = () => React.useContext(RouteContext);
+const RouteContext = React.createContext<
+  [id: string | undefined, match: RouteMatch][]
+>(null!);
+
+export function useRoute(id?: string): RouteMatch {
+  const ctx = React.useContext(RouteContext);
+  if (!ctx) return undefined as never;
+  if (!id) return ctx[ctx.length - 1][1];
+  const result = ctx?.find((el) => el[0] === id)?.[1];
+  if (!result) {
+    throw new Error(
+      `useRoute is called with id "${id}", but no routes with that id is found.`
+    );
+  }
+  return result;
+}
+
+export const RouteContextProvider = ({
+  children,
+  id,
+  match,
+}: {
+  id: string | undefined;
+  match: RouteMatch;
+  children?: React.ReactNode;
+}) => {
+  const prev = React.useContext(RouteContext);
+
+  const next = React.useMemo(() => {
+    return [...(prev ?? []), [id, match]] as [
+      id: string | undefined,
+      match: RouteMatch
+    ][];
+  }, [prev, id, match]);
+
+  return <RouteContext.Provider value={next}>{children}</RouteContext.Provider>;
+};
 
 export function Router({
   children,
