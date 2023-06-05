@@ -7,7 +7,8 @@
   "sideEffects": false,
   "license": "MIT",
   "files": [
-    "dist/**"
+    "dist/**",
+    "routes/**"
   ],
   "scripts": {
     "build": "tsup --entry src/index.ts --entry src/routes/nested.tsx --entry src/routes/parallel.tsx --entry src/routes/nested-transition.tsx --format esm,cjs --minify --dts --external react",
@@ -44,40 +45,28 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./routes/parallel": {
+      "types": "./dist/routes/parallel.d.ts",
       "import": "./dist/routes/parallel.mjs",
       "require": "./dist/routes/parallel.js",
       "default": "./dist/routes/parallel.js"
     },
     "./routes/nested": {
+      "types": "./dist/routes/nested.d.ts",
       "import": "./dist/routes/nested.mjs",
       "require": "./dist/routes/nested.js",
       "default": "./dist/routes/nested.js"
     },
     "./routes/nested-transition": {
+      "types": "./dist/routes/nested-transition.d.ts",
       "import": "./dist/routes/nested-transition.mjs",
       "require": "./dist/routes/nested-transition.js",
       "default": "./dist/routes/nested-transition.js"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      ".": [
-        "dist/index.d.ts"
-      ],
-      "routes/parallel": [
-        "dist/routes/parallel.d.ts"
-      ],
-      "routes/nested": [
-        "dist/routes/nested.d.ts"
-      ],
-      "routes/nested-transition": [
-        "dist/routes/nested-transition.d.ts"
-      ]
     }
   }
 }
