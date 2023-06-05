@@ -7,47 +7,42 @@ export const TransitionContext = React.createContext<string>(null!);
 export const useRouteTransition = () => React.useContext(TransitionContext);
 
 function usePrevious<T>(value: T) {
-  const [prev, setPrev] = React.useState<T>();
-  const [current, setCurrent] = React.useState<T>();
-
+  const [{ current, prev }, setState] = React.useState<{ current: T; prev: T }>(
+    { current: value, prev: value }
+  );
   let isReset = false;
-
   if (current !== value) {
-    setPrev(current);
-    setCurrent(value);
+    setState({ prev: current, current: value });
     isReset = true;
   }
   return [prev || value, isReset] as [T, boolean];
 }
 
 export function NestedTransitionRoutesImpl({ id }: { id?: string }) {
-  const currentMatches = useMatches();
-  const [prevMatches, isReset] = usePrevious(currentMatches);
+  const matches = useMatches();
+  const [prevMatches, isReset] = usePrevious(matches);
 
-  const replace = prevMatches.length === currentMatches.length;
-
-  const depth = Math.max(prevMatches.length, currentMatches.length);
+  const depth = Math.max(prevMatches.length, matches.length);
 
   const firstNonMatch = React.useMemo(() => {
-    for (let i = 0; i < depth; i++) {
-      if (prevMatches[i]?.segment !== currentMatches[i]?.segment) {
-        return i;
-      }
-    }
+    const index = prevMatches.findIndex(
+      (x, i) => x.segment !== matches[i]?.segment
+    );
+    return index >= 0 ? index : depth;
+  }, [prevMatches, matches]);
+
+  if (isReset) {
     return null;
-  }, [prevMatches, currentMatches]);
+  }
 
   const render = (
-    match: RouteMatch,
+    match: RouteMatch | undefined,
     props: { exit?: boolean; replace?: boolean },
     children: React.ReactNode
   ) => {
+    if (!match) return null;
     return (
-      <RouteTransition
-        key={match.segment}
-        exit={props.exit}
-        replace={props.replace}
-      >
+      <RouteTransition key={match.accumulated} {...props}>
         <RouteContextProvider match={match} id={id}>
           <match.config.render params={match.params}>
             {children}
@@ -62,43 +57,28 @@ export function NestedTransitionRoutesImpl({ id }: { id?: string }) {
   const children = Array.from({ length: depth }).reduce(
     (children: Accumulator, _, i): Accumulator => {
       const index = depth - 1 - i;
-      const currentMatch = currentMatches[index];
-      const prevMatch = prevMatches[index];
+      const currentMatch: RouteMatch | undefined = matches[index];
+      const prevMatch: RouteMatch | undefined = prevMatches[index];
 
-      if (firstNonMatch !== null && index === firstNonMatch - 1) {
-        // has both paths as children (merges)
-        // (will always exist since first segment is always a match)
-
-        return [currentMatch ? render(currentMatch, {}, children) : null];
-      } else if (firstNonMatch !== null && index >= firstNonMatch) {
+      if (index >= firstNonMatch) {
         // handles two paths
 
+        const replace =
+          prevMatches.length === matches.length && firstNonMatch === index;
+
         return [
-          prevMatch
-            ? render(
-                prevMatch,
-                { exit: true, replace: firstNonMatch === index && replace },
-                children[1]
-              )
-            : null,
-          currentMatch
-            ? render(
-                currentMatch,
-                { replace: firstNonMatch === index && replace },
-                children[0]
-              )
-            : null,
+          render(prevMatch, { exit: true, replace }, children[0]),
+          render(currentMatch, { replace }, children[1]),
         ];
-      } else {
-        return [currentMatch ? render(currentMatch, {}, children[0]) : null];
       }
+
+      // firstNonMatch is the nexus that has both paths as children
+      const nextChildren = index === firstNonMatch - 1 ? children : children[0];
+
+      return [render(currentMatch, {}, nextChildren)];
     },
     [null, null] // deepest
   );
-
-  if (isReset) {
-    return null;
-  }
 
   return <>{children}</>;
 }

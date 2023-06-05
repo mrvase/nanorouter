@@ -10,4 +10,4 @@ export {
 export { createHistory } from "./history";
 export { Link } from "./Link";
 
-export type { Route } from "./types";
+export type { Route, RouteMatch } from "./types";
