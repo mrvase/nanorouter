@@ -67,13 +67,14 @@ export function NestedTransitionRoutesImpl({ id }: { id?: string }) {
           prevMatches.length === matches.length && firstNonMatch === index;
 
         return [
-          render(prevMatch, { exit: true, replace }, children[0]),
-          render(currentMatch, { replace }, children[1]),
+          render(prevMatch, { exit: true, replace }, [children[0]]),
+          render(currentMatch, { replace }, [children[1]]),
         ];
       }
 
       // firstNonMatch is the nexus that has both paths as children
-      const nextChildren = index === firstNonMatch - 1 ? children : children[0];
+      const nextChildren =
+        index === firstNonMatch - 1 ? children : [children[0]];
 
       return [render(currentMatch, {}, nextChildren)];
     },

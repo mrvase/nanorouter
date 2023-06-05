@@ -6,6 +6,7 @@ export {
   useRoute,
   useNavigate,
   useMatches,
+  useRouterIsLoading,
 } from "./Router";
 export { createHistory } from "./history";
 export { Link } from "./Link";
