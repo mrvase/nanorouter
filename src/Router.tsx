@@ -13,19 +13,22 @@ import { createKey, resolveTo } from "./utils";
 export const HistoryContext = React.createContext<History>(null!);
 export const useHistory = () => React.useContext(HistoryContext);
 
-export const NavigationContext = React.createContext<
-  (to: To, options?: NavigateOptions) => Path
->(null!);
-export const useNavigate = () => React.useContext(NavigationContext);
-
 export const RouterStateContext = React.createContext<HistoryState>(null!);
 export const useLocation = () => React.useContext(RouterStateContext).location;
 export const useAction = () => React.useContext(RouterStateContext).action;
 export const useRouterIsLoading = () =>
   React.useContext(RouterStateContext).isLoading;
 
-export const PathContext = React.createContext<Path>(null!);
-export const usePath = () => React.useContext(PathContext);
+export const RelativeNavigationContext = React.createContext<
+  (to: To, options?: NavigateOptions) => Path
+>(null!);
+export const useNavigate = () => React.useContext(RelativeNavigationContext);
+
+export const RelativePathContext = React.createContext<Path>(null!);
+export const usePath = () => React.useContext(RelativePathContext);
+
+export const RelativeMatchesContext = React.createContext<RouteMatch[]>(null!);
+export const useMatches = () => React.useContext(RelativeMatchesContext);
 
 const RouteContext = React.createContext<
   [id: string | undefined, match: RouteMatch][]
@@ -100,11 +103,13 @@ export function Router({
   return (
     <HistoryContext.Provider value={history}>
       <RouterStateContext.Provider value={state}>
-        <PathContext.Provider value={state.location}>
-          <NavigationContext.Provider value={navigate}>
-            {children}
-          </NavigationContext.Provider>
-        </PathContext.Provider>
+        <RelativeMatchesContext.Provider value={state.matches}>
+          <RelativePathContext.Provider value={state.location}>
+            <RelativeNavigationContext.Provider value={navigate}>
+              {children}
+            </RelativeNavigationContext.Provider>
+          </RelativePathContext.Provider>
+        </RelativeMatchesContext.Provider>
       </RouterStateContext.Provider>
     </HistoryContext.Provider>
   );

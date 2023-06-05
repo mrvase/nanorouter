@@ -41,21 +41,7 @@ const resolveMatch = (
   }
 };
 
-export function getMatches(
-  url: string,
-  routes: Route[],
-  options?: {}
-): Omit<RouteMatch, "config">[];
-export function getMatches(
-  url: string,
-  routes: Route[],
-  options: { withConfig: true }
-): RouteMatch[];
-export function getMatches(
-  url: string,
-  routes: Route[],
-  options: { withConfig?: boolean } = {}
-): Omit<RouteMatch, "config">[] | RouteMatch[] {
+export function getMatches(url: string, routes: Route[]): RouteMatch[] {
   const matches: Omit<RouteMatch, "index">[] = [];
 
   const isMatch = (match: Partial<RouteMatch>): match is RouteMatch => {
@@ -69,7 +55,7 @@ export function getMatches(
         params: {},
         children: [],
         accumulated: "",
-        ...(options.withConfig && { config: next }),
+        config: next,
         ...resolved,
       };
       if (isMatch(match)) {
@@ -77,8 +63,7 @@ export function getMatches(
         if (next.subroutes) {
           match.children = getMatches(
             match.segment,
-            next.subroutes,
-            options
+            next.subroutes
           ) as RouteMatch[];
         }
         matches.push(match);

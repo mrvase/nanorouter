@@ -1,8 +1,13 @@
 import React from "react";
-import { usePath, useRoute, useNavigate, useHistory } from "../Router";
-import { PathContext, NavigationContext } from "../Router";
-import { getMatches } from "../matches";
-import { To, NavigateOptions, RouteMatch, Route } from "../types";
+import {
+  usePath,
+  useRoute,
+  useNavigate,
+  RelativeMatchesContext,
+  useMatches,
+} from "../Router";
+import { RelativePathContext, RelativeNavigationContext } from "../Router";
+import { To, NavigateOptions, RouteMatch } from "../types";
 
 export const RoutesTypeContext = React.createContext<
   "parallel" | "nested" | null
@@ -23,9 +28,7 @@ export function RelativeRouteNavigator({
       return ["", path.pathname];
     } else if (prevType === "nested") {
       const parentRoute = route.accumulated.slice(0, -route.segment.length);
-
       const nestedPathName = path.pathname.slice(parentRoute.length);
-
       return [parentRoute, nestedPathName];
     } else {
       return ["", route.segment];
@@ -49,14 +52,22 @@ export function RelativeRouteNavigator({
     [parentNavigate, parentRoute]
   );
 
+  const matches = useMatches();
+
+  const nextMatches = route
+    ? matches.find((el) => el === route)!.children
+    : matches;
+
   return (
-    <RoutesTypeContext.Provider value="nested">
-      <PathContext.Provider value={nextPath}>
-        <NavigationContext.Provider value={navigate}>
-          {children}
-        </NavigationContext.Provider>
-      </PathContext.Provider>
-    </RoutesTypeContext.Provider>
+    <RelativeMatchesContext.Provider value={nextMatches}>
+      <RoutesTypeContext.Provider value="nested">
+        <RelativePathContext.Provider value={nextPath}>
+          <RelativeNavigationContext.Provider value={navigate}>
+            {children}
+          </RelativeNavigationContext.Provider>
+        </RelativePathContext.Provider>
+      </RoutesTypeContext.Provider>
+    </RelativeMatchesContext.Provider>
   );
 }
 
@@ -94,15 +105,16 @@ export function ParallelRouteNavigator({
 
   return (
     <RoutesTypeContext.Provider value="parallel">
-      <PathContext.Provider value={nextPath}>
-        <NavigationContext.Provider value={navigate}>
+      <RelativePathContext.Provider value={nextPath}>
+        <RelativeNavigationContext.Provider value={navigate}>
           {children}
-        </NavigationContext.Provider>
-      </PathContext.Provider>
+        </RelativeNavigationContext.Provider>
+      </RelativePathContext.Provider>
     </RoutesTypeContext.Provider>
   );
 }
 
+/*
 export const useMatches = () => {
   let config: { subroutes?: Route[] } = useRoute()?.config;
   if (!config) {
@@ -117,3 +129,4 @@ export const useMatches = () => {
     return matches;
   }, [path.pathname]);
 };
+*/

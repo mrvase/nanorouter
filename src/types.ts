@@ -35,6 +35,7 @@ export interface Listener {
 export type HistoryState = {
   action: Action;
   location: Location;
+  matches: RouteMatch[];
   isLoading: boolean;
   pending: Location | undefined;
 };

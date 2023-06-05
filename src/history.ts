@@ -61,6 +61,7 @@ export function createHistory(options: { routes: Route[]; window?: Window }) {
   let state: HistoryState = {
     action: "POP",
     location: getLocation(),
+    matches: getMatches(getLocation().pathname, options.routes),
     isLoading: true,
     pending: undefined,
   };
@@ -68,16 +69,17 @@ export function createHistory(options: { routes: Route[]; window?: Window }) {
   let current = createKey();
 
   function setState(
-    newState: Pick<HistoryState, "action" | "location">,
+    newState_: Pick<HistoryState, "action" | "location">,
     initial?: boolean
   ) {
+    const newState = {
+      ...newState_,
+      matches: getMatches(newState_.location.pathname, options.routes),
+    };
     const key = newState.location.key;
     current = key;
 
-    const matches = getMatches(newState.location.pathname, options.routes, {
-      withConfig: true,
-    });
-    const promises = callLoaders(matches);
+    const promises = callLoaders(newState.matches);
     const shouldAwait = promises.length > 0;
     let awaited = false;
 
@@ -91,7 +93,7 @@ export function createHistory(options: { routes: Route[]; window?: Window }) {
         ...state,
         isLoading: true,
         pending: newState.location,
-        ...(initial && { location: rootLocation }),
+        ...(initial && { location: rootLocation, matches: [] }),
       });
       awaited = true;
       Promise.all(promises).then(() => {

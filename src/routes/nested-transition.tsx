@@ -1,6 +1,6 @@
 import React from "react";
-import { RouteContextProvider } from "../Router";
-import { useMatches } from "./utils";
+import { RouteContextProvider, useMatches } from "../Router";
+import { RelativeRouteNavigator } from "./utils";
 import { RouteMatch } from "../types";
 
 export const TransitionContext = React.createContext<string>(null!);
@@ -20,7 +20,7 @@ function usePrevious<T>(value: T) {
   return [prev || value, isReset] as [T, boolean];
 }
 
-export function NestedTransitionRoutes({ id }: { id?: string }) {
+export function NestedTransitionRoutesImpl({ id }: { id?: string }) {
   const currentMatches = useMatches();
   const [prevMatches, isReset] = usePrevious(currentMatches);
 
@@ -102,6 +102,12 @@ export function NestedTransitionRoutes({ id }: { id?: string }) {
 
   return <>{children}</>;
 }
+
+export const NestedTransitionRoutes = (props: { id?: string }) => (
+  <RelativeRouteNavigator>
+    <NestedTransitionRoutesImpl {...props} />
+  </RelativeRouteNavigator>
+);
 
 function RouteTransition({
   children,

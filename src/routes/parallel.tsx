@@ -1,12 +1,8 @@
 import React from "react";
-import { RouteContextProvider, useNavigate } from "../Router";
+import { RouteContextProvider, useMatches, useNavigate } from "../Router";
 import { RouteMatch } from "../types";
 import { createKey } from "../utils";
-import {
-  ParallelRouteNavigator,
-  RelativeRouteNavigator,
-  useMatches,
-} from "./utils";
+import { ParallelRouteNavigator, RelativeRouteNavigator } from "./utils";
 
 export const createEvents = (id: string) => {
   const dispatch = (detail: { type: string; payload: any }) =>
@@ -129,13 +125,11 @@ function ParallelRoutesImpl({
   );
 }
 
-export function ParallelRoutes(props: {
+export const ParallelRoutes = (props: {
   id?: string;
   maintainInsertionOrder?: boolean;
-}) {
-  return (
-    <RelativeRouteNavigator>
-      <ParallelRoutesImpl {...props} />
-    </RelativeRouteNavigator>
-  );
-}
+}) => (
+  <RelativeRouteNavigator>
+    <ParallelRoutesImpl {...props} />
+  </RelativeRouteNavigator>
+);

@@ -1,11 +1,11 @@
-import { RouteContextProvider } from "../Router";
-import { useMatches, RelativeRouteNavigator } from "./utils";
+import { RouteContextProvider, useMatches } from "../Router";
+import { RelativeRouteNavigator } from "./utils";
 
-export function NestedRoutes({ id }: { id?: string }) {
+function NestedRoutesImpl({ id }: { id?: string }) {
   const matches = useMatches();
 
   return (
-    <RelativeRouteNavigator>
+    <>
       {matches.reduceRight((children, el, index) => {
         return (
           <RouteContextProvider key={index} match={el} id={id}>
@@ -13,6 +13,12 @@ export function NestedRoutes({ id }: { id?: string }) {
           </RouteContextProvider>
         );
       }, null as React.ReactNode)}
-    </RelativeRouteNavigator>
+    </>
   );
 }
+
+export const NestedRoutes = (props: { id?: string }) => (
+  <RelativeRouteNavigator>
+    <NestedRoutesImpl {...props} />
+  </RelativeRouteNavigator>
+);
