@@ -40,7 +40,7 @@ export function NestedTransitionRoutesImpl({ id }: { id?: string }) {
     props: { exit?: boolean; replace?: boolean },
     children: React.ReactNode
   ) => {
-    if (!match) return null;
+    if (!match || !match.config.render) return null;
     return (
       <RouteTransition key={match.accumulated} {...props}>
         <RouteContextProvider match={match} id={id}>

@@ -6,13 +6,17 @@ function NestedRoutesImpl({ id }: { id?: string }) {
 
   return (
     <>
-      {matches.reduceRight((children, el, index) => {
-        return (
-          <RouteContextProvider key={index} match={el} id={id}>
-            <el.config.render params={el.params}>{children}</el.config.render>
-          </RouteContextProvider>
-        );
-      }, null as React.ReactNode)}
+      {matches.reduceRight(
+        (children, el, index) =>
+          el.config.render ? (
+            <RouteContextProvider key={index} match={el} id={id}>
+              <el.config.render params={el.params}>{children}</el.config.render>
+            </RouteContextProvider>
+          ) : (
+            children
+          ),
+        null as React.ReactNode
+      )}
     </>
   );
 }

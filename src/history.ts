@@ -6,8 +6,11 @@ import type {
   Route,
   RouteMatch,
   HistoryState,
+  NavigateOptions,
+  To,
+  Path,
 } from "./types";
-import { createKey, createPath } from "./utils";
+import { createKey, createPath, resolveTo } from "./utils";
 
 type LoaderData = {
   params: Record<string, string>;
@@ -84,6 +87,7 @@ export function createHistory(options: { routes: Route[]; window?: Window }) {
     let awaited = false;
 
     const set = (newState: HistoryState) => {
+      if (current !== key) return;
       state = newState;
       if (listener && (!initial || awaited)) listener(newState);
     };
@@ -97,7 +101,6 @@ export function createHistory(options: { routes: Route[]; window?: Window }) {
       });
       awaited = true;
       Promise.all(promises).then(() => {
-        if (current !== key) return;
         set({
           ...newState,
           isLoading: false,
@@ -233,6 +236,23 @@ export function createHistory(options: { routes: Route[]; window?: Window }) {
     };
   }
 
+  function navigate(to: To, options: NavigateOptions = {}) {
+    const {
+      navigate = true,
+      replace = false,
+      state: historyState = null,
+    } = options;
+    let path: Path & Partial<Location> = resolveTo(to, state.location.pathname);
+
+    if (navigate) {
+      path.key = createKey();
+      path.state = historyState;
+      handleAction(replace ? "REPLACE" : "PUSH", path as Location);
+    }
+
+    return path as Location;
+  }
+
   const history: History = {
     get routes() {
       return options.routes;
@@ -253,13 +273,16 @@ export function createHistory(options: { routes: Route[]; window?: Window }) {
     replace(location) {
       handleAction("REPLACE", location);
     },
+    navigate,
     go(n) {
       const globalHistory = (options.window ?? document.defaultView!).history;
       return globalHistory.go(n);
     },
   };
 
-  setState(state, true); // to call loaders
+  // we queue this initial loader call so that loaders can call `push` or `replace`
+  // from the history object
+  queueMicrotask(() => setState(state, true));
 
   return history;
 }

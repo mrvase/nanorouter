@@ -11,4 +11,4 @@ export {
 export { createHistory } from "./history";
 export { Link } from "./Link";
 
-export type { Route, RouteMatch } from "./types";
+export type { History, Location, Route, RouteMatch } from "./types";

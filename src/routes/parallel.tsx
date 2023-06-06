@@ -109,18 +109,20 @@ function ParallelRoutesImpl({
           setKeys={setKeys}
         />
       )}
-      {renderList.map(([key, el], index) => (
-        <ParallelRouteNavigator
-          key={key.key}
-          pathname={el.segment}
-          matches={matches}
-          index={el.index}
-        >
-          <RouteContextProvider match={el} id={id}>
-            <el.config.render params={el.params} />
-          </RouteContextProvider>
-        </ParallelRouteNavigator>
-      ))}
+      {renderList.map(([key, el]) =>
+        el.config.render ? (
+          <ParallelRouteNavigator
+            key={key.key}
+            pathname={el.segment}
+            matches={matches}
+            index={el.index}
+          >
+            <RouteContextProvider match={el} id={id}>
+              <el.config.render params={el.params} />
+            </RouteContextProvider>
+          </ParallelRouteNavigator>
+        ) : null
+      )}
     </>
   );
 }

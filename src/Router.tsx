@@ -77,35 +77,12 @@ export function Router({
 }) {
   const state = React.useSyncExternalStore(...history.sync());
 
-  let activeRef = React.useRef(false);
-  React.useEffect(() => {
-    activeRef.current = true;
-  });
-
-  const pathname = state.location.pathname;
-
-  let navigate = React.useCallback(
-    (to: To, options: NavigateOptions = {}) => {
-      const { navigate = true, replace = false, state = null } = options;
-      let path: Path & Partial<Location> = resolveTo(to, pathname);
-
-      if (navigate && activeRef.current) {
-        path.key = createKey();
-        path.state = state;
-        (replace ? history.replace : history.push)(path as Location);
-      }
-
-      return path as Location;
-    },
-    [pathname]
-  );
-
   return (
     <HistoryContext.Provider value={history}>
       <RouterStateContext.Provider value={state}>
         <RelativeMatchesContext.Provider value={state.matches}>
           <RelativePathContext.Provider value={state.location}>
-            <RelativeNavigationContext.Provider value={navigate}>
+            <RelativeNavigationContext.Provider value={history.navigate}>
               {children}
             </RelativeNavigationContext.Provider>
           </RelativePathContext.Provider>

@@ -75,6 +75,8 @@ export interface History {
    */
   replace(to: Location): void;
 
+  navigate(to: To, options?: NavigateOptions): Location;
+
   /**
    * Navigates `n` entries backward/forward in the history stack relative to the
    * current index. For example, a "back" navigation would use go(-1).
@@ -89,15 +91,6 @@ export interface NavigateOptions {
   scroll?: boolean;
   state?: any;
   navigate?: boolean;
-  relativeToCurrentSegment?: boolean;
-  level?: number;
-  debug?: string;
-}
-
-export interface Navigator {
-  go: History["go"];
-  push: History["push"];
-  replace: History["replace"];
 }
 
 export type RouteMatch = {
@@ -116,7 +109,7 @@ export type Matcher =
 
 export type Route = {
   match: Matcher;
-  render: React.FC<any>;
+  render?: React.FC<any>;
   loader?: (params: Record<string, string>) => Promise<any> | void;
   next?: () => Route[];
   subroutes?: Route[];
