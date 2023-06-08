@@ -5,19 +5,22 @@ const resolveMatch = (
   matcher: Matcher
 ): Partial<RouteMatch> | undefined => {
   if (typeof matcher === "string") {
-    const segments = matcher.split("/");
-    segments.splice(0, 1); // remove first empty element
     let regex = "";
     let keys = [];
-    for (let segment of segments) {
-      if (segment.startsWith(":")) {
-        keys.push(segment.slice(1));
-        const existingRegex = segment.slice(segment.indexOf("("));
-        regex += existingRegex.startsWith("(")
-          ? `/${existingRegex}`
-          : "/([^/]+)";
-      } else {
-        regex += `/${segment}`;
+    if (matcher.indexOf("/:") === -1) {
+      regex = matcher;
+    } else {
+      const segments = matcher.split("/");
+      segments.splice(0, 1); // remove first empty element
+      for (let segment of segments) {
+        if (segment.startsWith(":")) {
+          const array = segment.slice(1).split(/(\()/);
+          keys.push(array.splice(0, 1)[0]);
+          const customRegex = array.join("");
+          regex += customRegex ? `/${customRegex}` : "/([^/]+)";
+        } else {
+          regex += `/${segment}`;
+        }
       }
     }
     const match = url.match(new RegExp(`^${regex}`));
@@ -85,6 +88,10 @@ export function getMatches(url: string, routes: Route[]): RouteMatch[] {
       }
     }
 
+    if (url === "" || url === "/") {
+      return;
+    }
+
     matches.push({
       params: {},
       children: [],
@@ -98,10 +105,6 @@ export function getMatches(url: string, routes: Route[]): RouteMatch[] {
     });
     // if we get here, no match was found
   };
-
-  if (url === "" || url === "/") {
-    return [];
-  }
 
   getMatch("", url, routes);
 
