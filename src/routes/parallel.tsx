@@ -52,7 +52,7 @@ function ParallelRoutingListener({
         array.splice(payload.to, 0, removed);
       } else if (type === "open") {
         const order = Math.max(...array.map((el) => el[1].order)) + 1;
-        array.splice(payload.index + 1, 0, [
+        array.splice(payload.index, 0, [
           payload.path,
           { key: createKey(), order },
         ]);
