@@ -27,7 +27,8 @@ export function RelativeRouteNavigator({
     if (prevType === null) {
       return ["", path.pathname];
     } else if (prevType === "nested") {
-      const parentRoute = route.accumulated.slice(0, -route.segment.length);
+      const sliced = -1 * route.segment.length || undefined; // undefined => not sliced
+      const parentRoute = route.accumulated.slice(0, sliced);
       const nestedPathName = path.pathname.slice(parentRoute.length);
       return [parentRoute, nestedPathName];
     } else {
