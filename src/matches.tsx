@@ -51,9 +51,15 @@ export function getMatches(url: string, routes: Route[]): RouteMatch[] {
     return "segment" in match;
   };
 
-  const getMatch = (prevUrl: string, nextUrl: string, routes: Route[]) => {
+  const getMatch = (
+    matchedUrl: string,
+    remainingUrl: string,
+    routes: Route[]
+  ) => {
+    let nextMatchedUrl = matchedUrl;
+    let nextRemainingUrl = remainingUrl;
     for (let next of routes) {
-      const resolved = resolveMatch(nextUrl, next.match);
+      const resolved = resolveMatch(remainingUrl, next.match);
       const match: Partial<RouteMatch> = {
         params: {},
         children: [],
@@ -62,7 +68,10 @@ export function getMatches(url: string, routes: Route[]): RouteMatch[] {
         ...resolved,
       };
       if (isMatch(match)) {
-        match.accumulated = `${prevUrl}${match.segment}`;
+        nextMatchedUrl = `${matchedUrl}${match.segment}`;
+        nextRemainingUrl = remainingUrl.slice(match.segment.length);
+
+        match.accumulated = nextMatchedUrl;
         if (next.subroutes) {
           match.children = getMatches(
             match.segment,
@@ -70,25 +79,17 @@ export function getMatches(url: string, routes: Route[]): RouteMatch[] {
           ) as RouteMatch[];
         }
         matches.push(match);
-        if (match.segment.length < nextUrl.length) {
-          if (next.next) {
-            getMatch(
-              `${prevUrl}${match.segment}`,
-              nextUrl.slice(match.segment.length),
-              next.next()
-            );
-            return;
-          } else {
-            break;
-            // continue to add 404
-          }
-        } else {
+
+        // even if nextRemaningUrl === "", we will check if a route matches an empty string
+        if (next.next) {
+          getMatch(nextMatchedUrl, nextRemainingUrl, next.next());
           return;
         }
+        break;
       }
     }
 
-    if (url === "" || url === "/") {
+    if (nextRemainingUrl === "" || nextRemainingUrl === "/") {
       return;
     }
 
@@ -100,8 +101,8 @@ export function getMatches(url: string, routes: Route[]): RouteMatch[] {
         match: "404",
         next: () => [],
       },
-      accumulated: `${prevUrl}${nextUrl}`,
-      segment: nextUrl,
+      accumulated: `${nextMatchedUrl}${nextRemainingUrl}`,
+      segment: nextRemainingUrl,
     });
     // if we get here, no match was found
   };
